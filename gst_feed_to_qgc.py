@@ -1,4 +1,5 @@
 import threading
+import datetime
 import time
 import gi
 gi.require_version('Gst','1.0')
@@ -12,8 +13,12 @@ class H264Pipeline:
         self.videosrc = None
         self.videocap = None
         self.videoparse = None
+        self.networkqueue = None
+        self.filequeue = None
         self.rtpencoder = None
         self.videosink = None
+        self.filesink = None
+        self.tee = None
         self.islinked = False
 
     def gst_pipeline_h264_h264_init(self):
@@ -36,6 +41,23 @@ class H264Pipeline:
         print("Initializing video parser")
         self.videoparse = Gst.ElementFactory.make("h264parse","vid-parse")
 
+        # Initialize the tee to split link into a file sink and a udp sink
+        print("Initializing tee")
+        self.tee = Gst.ElementFactory.make("Tee","Tee")
+
+        # Initialize file sink queue to be saved locally
+        print("Initializing fil sink queue")
+        self.filequeue = Gst.ElementFactory.make("queue", "file-queue")
+
+        # Initialize file sink
+        print("Initializing local file sink")
+        self.filesink = Gst.ElementFactory.make("filesink","file-sink")
+        self.filesink.set_property("location","/home/aero_%s"%(datetime.datetime.now().strftime("%y%m%d%H%M")))
+
+        # Initialize udp sink queue to be sent over udp/rtp
+        print("Initializing network queue")
+        self.networkqueue = Gst.ElementFactory.make("queue","network-queue")
+
         # Initialize rtp encoder
         print("Initializing rtp encoder")
         self.rtpencoder = Gst.ElementFactory.make("rtph264pay", "rtp-enc")
@@ -50,14 +72,30 @@ class H264Pipeline:
         "Adding all elements to pipeline"
         self.pipeline.add(self.videosrc)
         self.pipeline.add(self.videoparse)
+        self.pipeline.add(self.tee)
+        self.pipeline.add(self.filequeue)
+        self.pipeline.add(self.filesink)
+        self.pipeline.add(self.networkqueue)
         self.pipeline.add(self.rtpencoder)
         self.pipeline.add(self.udpsink)
 
         # Link elements together in order, with filter
         print("Linking pipeline elements")
+
+        # Link elements before tee
         self.videosrc.link_filtered(self.videoparse,self.videocap)
-        self.videoparse.link(self.rtpencoder)
+        self.videoparse.link(self.tee)
+
+        # Link elements after tee regarding network
+        self.networkqueue.link(self.rtpencoder)
         self.rtpencoder.link(self.udpsink)
+
+        # Link elements after tee regarding file sink
+        self.filequeue.link(self.filesink)
+
+        # Link tee to elements after tee
+        self.tee.link(self.networkqueue)
+        self.tee.link(self.filequeue)
 
         self.islinked = True
 
