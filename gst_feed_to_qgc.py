@@ -1,8 +1,12 @@
+import threading
+import time
 import gi
 gi.require_version('Gst','1.0')
 from gi.repository import Gst, GObject
 
+
 class H264Pipeline:
+
     def __init__(self):
         self.pipeline = None
         self.videosrc = None
@@ -12,8 +16,7 @@ class H264Pipeline:
         self.videosink = None
         self.islinked = False
 
-
-    def gst_h264_src_h264_sink(self):
+    def gst_pipeline_h264_h264_init(self):
 
         print("Initializing GST Pipeline")
         Gst.init(None)
@@ -34,7 +37,7 @@ class H264Pipeline:
         self.videoparse = Gst.ElementFactory.make("h264parse","vid-parse")
 
         # Initialize rtp encoder
-        "print("Initializing rtp encoder")
+        print("Initializing rtp encoder")
         self.rtpencoder = Gst.ElementFactory.make("rtph264pay", "rtp-enc")
 
         # Initialize udp sink : requires ip address of qgc
@@ -57,4 +60,32 @@ class H264Pipeline:
         self.rtpencoder.link(self.udpsink)
 
     def start_feed(self):
-        if self.pipeline != None
+        if self.pipeline is not None\
+        and self.islinked == True:
+            print("Starting video feed")
+            self.pipeline.set_state(Gst.State.PAUSED)
+            self.pipeline.set_state(Gst.State.PLAYING)
+
+    def stop_feed(self):
+        print("Stopping video feed")
+        self.pipeline.set_state(Gst.State.PAUSED)
+
+    def h264_to_h264_task(self):
+        self.gst_pipeline_h264_h264_init()
+        self.start_feed()
+
+
+if __name__ == "__main__":
+
+    pipeline = H264Pipeline()
+    video_feed_thread = threading.Thread(target=pipeline.h264_to_h264_task)
+    time.sleep(1)
+
+    try:
+        video_feed_thread.join()
+        while True:
+            time.sleep(1)
+
+    except:
+        print("Feed failed. Exiting")
+        exit(0)
