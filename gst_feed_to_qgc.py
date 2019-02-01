@@ -69,7 +69,7 @@ class H264Pipeline:
         self.udpsink.set_property("port",5600)
 
         # Add all elements to the pipeline
-        "Adding all elements to pipeline"
+        print("Adding all elements to pipeline")
         self.pipeline.add(self.videosrc)
         self.pipeline.add(self.videoparse)
         self.pipeline.add(self.tee)
