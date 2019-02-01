@@ -43,7 +43,7 @@ class H264Pipeline:
 
         # Initialize the tee to split link into a file sink and a udp sink
         print("Initializing tee")
-        self.tee = Gst.ElementFactory.make("Tee","Tee")
+        self.tee = Gst.ElementFactory.make("tee","tee")
 
         # Initialize file sink queue to be saved locally
         print("Initializing fil sink queue")
@@ -94,8 +94,9 @@ class H264Pipeline:
         self.filequeue.link(self.filesink)
 
         # Link tee to elements after tee
-        self.tee.link(self.networkqueue)
+        # self.tee.link(self.networkqueue)
         self.tee.link(self.filequeue)
+        self.tee.link(self.networkqueue)
 
         self.islinked = True
 
