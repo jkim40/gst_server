@@ -44,7 +44,7 @@ class H264Pipeline:
         print("Initializing udp sink")
         self.udpsink = Gst.ElementFactory.make("udpsink","udp-sink")
         self.udpsink.set_property("host","192.168.0.101")
-        self.udpsink.set_property("pot",5600)
+        self.udpsink.set_property("port",5600)
 
         # Add all elements to the pipeline
         "Adding all elements to pipeline"
@@ -59,12 +59,16 @@ class H264Pipeline:
         self.videoparse.link(self.rtpencoder)
         self.rtpencoder.link(self.udpsink)
 
+        self.islinked = True
+
     def start_feed(self):
         if self.pipeline is not None\
         and self.islinked == True:
             print("Starting video feed")
             self.pipeline.set_state(Gst.State.PAUSED)
             self.pipeline.set_state(Gst.State.PLAYING)
+        else:
+            print("Pipeline non-existent, or elements not yet linked")
 
     def stop_feed(self):
         print("Stopping video feed")
@@ -79,6 +83,7 @@ if __name__ == "__main__":
 
     pipeline = H264Pipeline()
     video_feed_thread = threading.Thread(target=pipeline.h264_to_h264_task)
+    video_feed_thread.start()
     time.sleep(1)
 
     try:
