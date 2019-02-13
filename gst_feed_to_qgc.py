@@ -1,3 +1,22 @@
+#!/usr/bin/evn python
+"""
+GST server.
+
+This piece of software is property of Flightwave Aerospace Systems. Its primary
+use is to stream images to a ground controller running qground control over UDP.
+It does so by utilizing GST v1.0. For questions and concerns, see Flightwave
+Aerospace Systems.
+
+Parameters:
+    None
+
+Returns:
+    None
+
+"""
+__author__ = "Hong Kim"
+__copyright__ = "Copyright 2019, Flightwave Aerospace Systems"
+
 import threading
 import datetime
 import time
