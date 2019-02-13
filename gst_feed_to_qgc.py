@@ -147,6 +147,8 @@ if __name__ == "__main__":
     try:
         video_feed_thread.join()
         while True:
+            # Start user code here
+            # check if video_feed_thread has joined. If yes, then exit from loop.
             time.sleep(1)
 
     except:
