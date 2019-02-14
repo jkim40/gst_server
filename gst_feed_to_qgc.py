@@ -23,6 +23,7 @@ import time
 import gi
 gi.require_version('Gst','1.0')
 from gi.repository import Gst, GObject
+import os
 
 
 class H264Pipeline:
@@ -133,8 +134,18 @@ class H264Pipeline:
         self.pipeline.set_state(Gst.State.PAUSED)
 
     def h264_to_h264_task(self):
+
+        for d in query_video_devices():
+            print(d)
+        # Check compression formats for the video sources
+        # Prioritize the following : h264 mjpeg gray16le yuyv.
         self.gst_pipeline_h264_h264_init()
         self.start_feed()
+
+def query_video_devices():
+    # query /dev/ for video sources. Returns list of video devices 
+    device_path = "/dev" 
+    return [f for f in os.listdir(device_path) if "video" in f]
 
 
 if __name__ == "__main__":
