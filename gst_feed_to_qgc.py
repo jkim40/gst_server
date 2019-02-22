@@ -35,6 +35,7 @@ class H264Pipeline:
         self.videosrc = None
         self.videocap = None
         self.videoparse = None
+        self.rawqueue = None
         self.decodebin = None
         self.videoconverter = None
         self.h264encoder = None
@@ -242,7 +243,6 @@ class H264Pipeline:
         self.pipeline.set_state(Gst.State.PAUSED)
 
     def h264_to_h264_task(self, vid_src = "/dev/video0", ip_addr = "10.120.17.50"):
-        # get_video_formats(vid_src)
         # for d in query_video_devices():
         #     print(d)
 
