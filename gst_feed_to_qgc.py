@@ -28,6 +28,10 @@ gi.require_version('Gst','1.0')
 from gi.repository import Gst, GObject
 
 
+class FlightwaveSupportedDevices:
+    color_1 = 0
+    color_2 = 1
+    thermal_1 = 2
 
 class H264Pipeline:
 
@@ -439,7 +443,10 @@ def query_video_devices():
 
 
 def main(arg_in):
-    # These are fillers
+
+    # Initialized to True so that if Video device is not found, it only prints once.
+    video_device_found = True
+    # These are fillers.
     color_cam_1_present = True
     thermal_cam_present = False
     storage_device_present = False
@@ -448,6 +455,9 @@ def main(arg_in):
 
         # if a video device was found
         if len(query_video_devices()) != 0:
+            print("Video device(s) found:")
+            print(query_video_devices())
+            video_device_found = True
 
             # this is a filler for color camera. Todo: Logic for checking which cam is present
             if color_cam_1_present:
@@ -475,13 +485,15 @@ def main(arg_in):
                 time.sleep(1)
 
         else:
+            if video_device_found:
+                print("No video device found. Please plug in a Flightwave supported video device...")
+                video_device_found = False
             time.sleep(1)
 
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument("-ip", help="IP address of ground control",
-                            type=str)
+    arg_parser.add_argument("-ip", help="IP address of ground control", type=str)
     args = arg_parser.parse_args()
     if args.ip:
         print("IP ADDR: " + args.ip)
