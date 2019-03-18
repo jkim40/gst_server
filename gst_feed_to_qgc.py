@@ -295,7 +295,7 @@ class H264Pipeline:
         print("Linking pipeline elements")
 
         self.videosrc.link_filtered(self.videoparse, self.videocap)
-        self.videoparse.link(self.tee)
+        self.videoparse.link(self.networkqueue)
         self.networkqueue.link(self.rtpencoder)
         self.rtpencoder.link(self.udpsink)
         self.islinked = True
