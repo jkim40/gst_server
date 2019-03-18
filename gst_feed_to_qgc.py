@@ -485,5 +485,8 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
     if args.ip:
         print("IP ADDR: " + args.ip)
+        main(args)
+    else:
+        print("Missing target IP address to stream to.")
 
-    main(args)
+
