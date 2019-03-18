@@ -292,8 +292,9 @@ class H264Pipeline:
         # Initialize udp sink : requires ip address of qgc
         print("Initializing udp sink")
         self.udpsink = Gst.ElementFactory.make("udpsink","udp-sink")
-        self.udpsink.set_property("host",ip_addr)
-        self.udpsink.set_property("port",5600)
+        print("Setting port : %s, host 5600" % ip_addr)
+        self.udpsink.set_property("host", ip_addr)
+        self.udpsink.set_property("port", 5600)
 
         # Add all elements to the pipeline
         print("Adding all elements to pipeline")
@@ -438,7 +439,7 @@ class H264Pipeline:
     def idle_task(self):
         print("Entering idle task while video feeds.")
         while True:
-            if len(query_video_devices()) == 0 or "q" == input("To quit, enter 'q'"):
+            if len(query_video_devices()) == 0:
                 self.stop_feed()
                 self.islinked = False
                 break
