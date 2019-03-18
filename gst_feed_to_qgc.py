@@ -434,6 +434,15 @@ class H264Pipeline:
         print("Initializing video feed for " + vid_src + " :: " + ip_addr)
         self.gst_pipeline_color_cam_init(vid_src, ip_addr)
         self.start_feed()
+        self.idle_task()
+
+    def idle_task(self):
+        while True:
+            if len(query_video_devices()) == 0:
+                self.islinked = False
+                break
+            else:
+                time.sleep(0.5)
 
 
 def query_video_devices():
@@ -481,6 +490,7 @@ def main(arg_in):
                 # Start user code here
                 # check if video_feed_thread has joined. If yes, then exit from loop.
                 if not video_feed_thread.is_alive():
+                    print("Video feed has ended.")
                     break
                 time.sleep(1)
 
