@@ -266,20 +266,7 @@ class H264Pipeline:
 
         # Initialize the video feed parser to parse h.264 frames
         print("Initializing video parser")
-        self.videoparse = Gst.ElementFactory.make("h264parse","vid-parse")
-
-        # Initialize the tee to split link into a file sink and a udp sink
-        print("Initializing tee")
-        self.tee = Gst.ElementFactory.make("tee","tee")
-
-        # Initialize file sink queue to be saved locally
-        print("Initializing fil sink queue")
-        self.filequeue = Gst.ElementFactory.make("queue", "file-queue")
-
-        # Initialize file sink
-        print("Initializing local file sink")
-        self.filesink = Gst.ElementFactory.make("filesink","file-sink")
-        self.filesink.set_property("location","/home/aero_%s"%(datetime.datetime.now().strftime("%y%m%d%H%M")))
+        self.videoparse = Gst.ElementFactory.make("h264parse", "vid-parse")
 
         # Initialize udp sink queue to be sent over udp/rtp
         print("Initializing network queue")
@@ -310,26 +297,10 @@ class H264Pipeline:
         # Link elements together in order, with filter
         print("Linking pipeline elements")
 
-        if True:
-            # Link elements before tee
-            self.videosrc.link_filtered(self.videoparse,self.videocap)
-            self.videoparse.link(self.tee)
-        else:
-            self.videosrc.link_filtered(self.videoparse,self.videocap) 
-            self.videoparse.link(self.networkqueue)
-
-        # Link elements after tee regarding network
+        self.videosrc.link_filtered(self.videoparse, self.videocap)
+        self.videoparse.link(self.tee)
         self.networkqueue.link(self.rtpencoder)
         self.rtpencoder.link(self.udpsink)
-
-        # Link elements after tee regarding file sink
-        self.filequeue.link(self.filesink)
-
-        if True:
-            # Link tee to elements after tee
-            self.tee.link(self.filequeue)
-            self.tee.link(self.networkqueue)
-
         self.islinked = True
 
     def gst_pipeline_color_cam_with_file_store_init(self, vid_src = "/dev/video0",ip_addr="10.120.117.50"):
