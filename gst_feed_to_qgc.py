@@ -418,9 +418,8 @@ class H264Pipeline:
         self.islinked = True
 
     def start_feed(self):
-        if self.pipeline is not None\
-        and self.islinked == True:
-            print("Starting video feed")
+        if self.pipeline is not None and self.islinked is True:
+            print("Starting video feed...")
             self.pipeline.set_state(Gst.State.PAUSED)
             self.pipeline.set_state(Gst.State.PLAYING)
         else:
@@ -437,8 +436,10 @@ class H264Pipeline:
         self.idle_task()
 
     def idle_task(self):
+        print("Entering idle task while video feeds.")
         while True:
-            if len(query_video_devices()) == 0:
+            if len(query_video_devices()) == 0 or "q" == input("To quit, enter \"q\""):
+                self.stop_feed()
                 self.islinked = False
                 break
             else:
