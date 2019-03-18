@@ -408,7 +408,7 @@ class H264Pipeline:
         print("Entering idle task while video feeds.")
         while True:
             if len(query_video_devices()) == 0:
-                print("Stopping feed...")
+                print("Stopping feed")
                 self.stop_feed()
                 self.islinked = False
                 print("Returning to main task...")
@@ -461,10 +461,9 @@ def main(arg_in):
             while True:
                 # Start user code here
                 # check if video_feed_thread has joined. If yes, then exit from loop.
-                if not pipeline.islinked:
+                if not video_feed_thread.is_alive():
                     print("Video feed has ended.")
                     break
-                time.sleep(1)
 
         else:
             if video_device_found:
