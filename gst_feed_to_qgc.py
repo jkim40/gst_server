@@ -483,6 +483,7 @@ if __name__ == "__main__":
     arg_parser.add_argument("-ip", help="IP address of ground control",
                             type=str)
     args = arg_parser.parse_args()
-    print("IP ADDR: " + args.ip)
+    if args.ip:
+        print("IP ADDR: " + args.ip)
 
     main(args)
