@@ -408,8 +408,10 @@ class H264Pipeline:
         print("Entering idle task while video feeds.")
         while True:
             if len(query_video_devices()) == 0:
+                print("Stopping feed...")
                 self.stop_feed()
                 self.islinked = False
+                print("Returning to main task...")
                 break
             else:
                 time.sleep(0.5)
