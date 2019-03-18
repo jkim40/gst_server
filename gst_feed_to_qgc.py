@@ -259,10 +259,10 @@ class H264Pipeline:
 
         # set up the Gst cap(s) for video/x-264 format
         print("Generating video cap")
-        # self.videocap = Gst.caps_from_string("video/x-h264,width=1920,height=1080,framerate=30/1")
-        # self.videocap = Gst.caps_from_string("video/x-h264,width=1280,height=720,framerate=30/1")
-        # self.videocap = Gst.caps_from_string("video/x-h264,width=640,height=480,framerate=30/1")
-        self.videocap = Gst.caps_from_string("video/x-h264,width=640,height=360,framerate=30/1")
+        # self.videocap = Gst.caps_from_string("video/x-h264,width=1920,height=1080")
+        # self.videocap = Gst.caps_from_string("video/x-h264,width=1280,height=720")
+        # self.videocap = Gst.caps_from_string("video/x-h264,width=640,height=480")
+        self.videocap = Gst.caps_from_string("video/x-h264,width=640,height=360")
 
         # Initialize the video feed parser to parse h.264 frames
         print("Initializing video parser")
