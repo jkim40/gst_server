@@ -55,4 +55,14 @@ Test Gst Pipelines:
     1080p Color: 
         gst-launch-1.0 v4l2src device=/dev/video1 \
         ! video/x-h264,width=1920,height=1080 \
-        ! h264parse ! rtph264pay ! udpsink host=ip port = 5600
+        ! h264parse ! rtph264pay ! udpsink host=ip port=5600
+        
+    1080p Color with save to local storage:
+        gst-launch-1.0 v4l2src device=/dev/video1 \ 
+        ! tee name=t ! queue ! video/x-h264, width=640, height=480 \
+        ! h264parse ! filesink location=/home/main/<insert name> t. \ 
+        ! queue ! decodebin ! videoscale ! videorate \
+        ! video/x-raw,framerate=15/1,width=640,height=360 \
+        ! x264enc bitrate=500 speed-preset=superfast tune=zerolatency \
+        ! h264parse ! rtph264pay ! udpsink host=ip port=5600 
+        
