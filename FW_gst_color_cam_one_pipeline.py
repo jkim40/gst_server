@@ -25,16 +25,12 @@ import time
 import gi
 gi.require_version('Gst','1.0')
 from gi.repository import Gst, GObject
+import FW_H264_PL
 
 
-class FlightwaveSupportedDevices:
-    color_1 = 0
-    color_2 = 1
-    thermal_1 = 2
+class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
 
-class H264Pipeline:
-
-    def __init__(self):
+    def __init__(self, ):
         self.pipeline = None
         self.videosrc = None
         self.videocap = None
@@ -52,199 +48,6 @@ class H264Pipeline:
         self.udpsink = None
         self.tee = None
         self.islinked = False
-
-    def gst_pipeline_thermal_cam_0_init(self, vid_src="/dev/video0", ip_addr="10.120.17.50"):
-        print("Initializing GST Pipeline")
-        Gst.init(None)
-
-        self.pipeline = Gst.Pipeline.new("raw to h.264")
-
-        # Initialize video feed sourcefrom
-        print("Initializing v4l2 source")
-        self.videosrc = Gst.ElementFactory.make("v4l2src", "vid-src")
-        self.videosrc.set_property("device", vid_src)
-
-        # set up the Gst cap(s) for video/x-264 format
-        print("Generating video cap")
-        self.videocap = Gst.caps_from_string("video/x-raw,format=nv12,width=640,height=512")
-
-        # Initialize the video feed parser to parse raw frames
-        print("Initializing video parser")
-        self.videoparse = Gst.ElementFactory.make("rawvideoparse", "vid-parse")
-
-        # Initialize the binary decoder
-        print("Initializing binary decoder")
-        self.decodebin = Gst.ElementFactory.make("decodebin", "decode-bin")
-
-        # Initialize the video converter
-        print("Initializing video converter")
-        self.videoconverter = Gst.ElementFactory.make("videoconvert", "vid-conv")
-
-        # Initialize encoder
-        print("Initializing h264 video encoder")
-        self.h264encoder = Gst.ElementFactory.make("x264enc", "h264-enc")
-
-        # Initialize the tee to split link into a file sink and a udp sink
-        print("Initializing tee")
-        self.tee = Gst.ElementFactory.make("tee", "tee")
-
-        # Initialize file sink queue to be saved locally
-        print("Initializing fil sink queue")
-        self.filequeue = Gst.ElementFactory.make("queue", "file-queue")
-
-        # Initialize file sink
-        print("Initializing local file sink")
-        self.filesink = Gst.ElementFactory.make("filesink", "file-sink")
-        self.filesink.set_property("location","/home/aero_%s"%(datetime.datetime.now().strftime("%y%m%d%H%M")))
-
-        # Initialize udp sink queue to be sent over udp/rtp
-        print("Initializing network queue")
-        self.networkqueue = Gst.ElementFactory.make("queue", "network-queue")
-
-        # Initialize rtp encoder
-        print("Initializing rtp encoder")
-        self.rtpencoder = Gst.ElementFactory.make("rtph264pay", "rtp-enc")
-
-        # Initialize udp sink : requires ip address of qgc
-        print("Initializing udp sink")
-        self.udpsink = Gst.ElementFactory.make("udpsink", "udp-sink")
-        self.udpsink.set_property("host", ip_addr)
-        self.udpsink.set_property("port", 5600)
-
-        # Add all elements to the pipeline
-        print("Adding all elements to pipeline")
-        self.pipeline.add(self.videosrc)
-        self.pipeline.add(self.videoparse)
-        self.pipeline.add(self.decodebin)
-        self.pipeline.add(self.videoconverter)
-        self.pipeline.add(self.h264encoder)
-        self.pipeline.add(self.tee)
-        self.pipeline.add(self.filequeue)
-        self.pipeline.add(self.filesink)
-        self.pipeline.add(self.networkqueue)
-        self.pipeline.add(self.rtpencoder)
-        self.pipeline.add(self.udpsink)
-
-        # Link elements together in order, with filter
-        print("Linking pipeline elements")
-
-        # Link elements before tee
-        self.videosrc.link_filtered(self.videoparse,self.videocap)
-        self.videoparse.link(self.decodebin)
-        self.decodebin.link(self.videoconverter)
-        self.videoconverter.link(self.h264encoder)
-        self.h264encoder.link(self.tee)
-
-        # Link elements after tee regarding network
-        self.networkqueue.link(self.rtpencoder)
-        self.rtpencoder.link(self.udpsink)
-
-        # Link elements after tee regarding file sink
-        self.filequeue.link(self.filesink)
-
-        # Link tee to elements after tee
-        # self.tee.link(self.networkqueue)
-        self.tee.link(self.filequeue)
-        self.tee.link(self.networkqueue)
-
-        self.islinked = True
-
-    def gst_pipeline_thermal_cam_0_with_file_store_init(self, vid_src="/dev/video0", ip_addr="10.120.17.50"):
-        print("Initializing GST Pipeline")
-        Gst.init(None)
-
-        self.pipeline = Gst.Pipeline.new("raw to h.264")
-
-        # Initialize video feed sourcefrom
-        print("Initializing v4l2 source")
-        self.videosrc = Gst.ElementFactory.make("v4l2src","vid-src")
-        self.videosrc.set_property("device", vid_src)
-
-        # set up the Gst cap(s) for video/x-264 format
-        print("Generating video cap")
-        self.videocap = Gst.caps_from_string("video/x-raw,format=nv12,width=640,height=512")
-
-        # Initialize the video feed parser to parse raw frames
-        print("Initializing video parser")
-        self.videoparse = Gst.ElementFactory.make("rawvideoparse","vid-parse")
-
-        # Initialize the binary decoder
-        print("Initializing binary decoder")
-        self.decodebin = Gst.ElementFactory.make("decodebin","decode-bin")
-
-        # Initialize the video converter
-        print("Initializing video converter")
-        self.videoconverter = Gst.ElementFactory.make("videoconvert","vid-conv")
-
-        # Initialize encoder
-        print("Initializing h264 video encoder")
-        self.h264encoder = Gst.ElementFactory.make("x264enc","h264-enc")
-
-        # Initialize the tee to split link into a file sink and a udp sink
-        print("Initializing tee")
-        self.tee = Gst.ElementFactory.make("tee","tee")
-
-        # Initialize file sink queue to be saved locally
-        print("Initializing fil sink queue")
-        self.filequeue = Gst.ElementFactory.make("queue", "file-queue")
-
-        # Initialize file sink
-        print("Initializing local file sink")
-        self.filesink = Gst.ElementFactory.make("filesink","file-sink")
-        self.filesink.set_property("location","/home/aero_%s"%(datetime.datetime.now().strftime("%y%m%d%H%M")))
-
-        # Initialize udp sink queue to be sent over udp/rtp
-        print("Initializing network queue")
-        self.networkqueue = Gst.ElementFactory.make("queue","network-queue")
-
-        # Initialize rtp encoder
-        print("Initializing rtp encoder")
-        self.rtpencoder = Gst.ElementFactory.make("rtph264pay", "rtp-enc")
-
-        # Initialize udp sink : requires ip address of qgc
-        print("Initializing udp sink")
-        self.udpsink = Gst.ElementFactory.make("udpsink","udp-sink")
-        self.udpsink.set_property("host",ip_addr)
-        self.udpsink.set_property("port",5600)
-
-        # Add all elements to the pipeline
-        print("Adding all elements to pipeline")
-        self.pipeline.add(self.videosrc)
-        self.pipeline.add(self.videoparse)
-        self.pipeline.add(self.decodebin)
-        self.pipeline.add(self.videoconverter)
-        self.pipeline.add(self.h264encoder)
-        self.pipeline.add(self.tee)
-        self.pipeline.add(self.filequeue)
-        self.pipeline.add(self.filesink)
-        self.pipeline.add(self.networkqueue)
-        self.pipeline.add(self.rtpencoder)
-        self.pipeline.add(self.udpsink)
-
-        # Link elements together in order, with filter
-        print("Linking pipeline elements")
-
-        # Link elements before tee
-        self.videosrc.link_filtered(self.videoparse,self.videocap)
-        self.videoparse.link(self.decodebin)
-        self.decodebin.link(self.videoconverter)
-        self.videoconverter.link(self.h264encoder)
-        self.h264encoder.link(self.tee)
-
-        # Link elements after tee regarding network
-        self.networkqueue.link(self.rtpencoder)
-        self.rtpencoder.link(self.udpsink)
-
-        # Link elements after tee regarding file sink
-        self.filequeue.link(self.filesink)
-
-        # Link tee to elements after tee
-        # self.tee.link(self.networkqueue)
-        self.tee.link(self.filequeue)
-        self.tee.link(self.networkqueue)
-
-        self.islinked = True
-
 
     def gst_pipeline_color_cam_init(self, vid_src = "/dev/video0",ip_addr="10.120.117.50"):
 
@@ -443,8 +246,8 @@ class H264Pipeline:
 
 
 def query_video_devices():
-    # query /dev/ for video sources. Returns list of video devices 
-    device_path = "/dev" 
+    # query /dev/ for video sources. Returns list of video devices
+    device_path = "/dev"
     return [f for f in os.listdir(device_path) if "video" in f]
 
 
@@ -475,7 +278,7 @@ def main(arg_in):
             # this is a filler for color camera. Todo: Logic for checking which cam is present
             if color_cam_1_present:
 
-                # Check that there is a storage device that Flightwave has configured
+                # Check that there is a storage device that flightwave has configured
                 if len(query_storage_devices()) != 0:
                     video_feed_thread = threading.Thread(target=pipeline.color_cam_with_file_store_task,
                                                          args=["/dev/video1", arg_in.ip, query_storage_devices()[0]])
