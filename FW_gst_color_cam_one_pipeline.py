@@ -249,12 +249,12 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         if not ret:
             print("Error: Elements could not be linked")
             self.is_linked = False
-            return
+            # return
         else:
             self.is_linked = True
 
         # This is a place holder until decodebin -> video converter is figured out.
-        self.pipeline = Gst.gst_parse_launch("gst-launch-1.0 v4l2src device=/dev/video1 " +
+        self.pipeline = Gst.parse_launch("v4l2src device=/dev/video1 " +
                                              "! tee name=t ! queue ! video/x-h264, width=640, height=480 " +
                                              "! h264parse ! filesink location=" + storage_location +
                                              "%s" % (datetime.datetime.now().strftime("%y%m%d%H%M")) + " t. " +
