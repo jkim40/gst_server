@@ -18,6 +18,7 @@ __author__ = "Hong Kim"
 __copyright__ = "Copyright 2019, Flightwave Aerospace Systems"
 
 import argparse
+import subprocess
 import time
 import gi
 import FW_H264_PL
@@ -31,7 +32,7 @@ def main(arg_in):
     video_device_found = True
 
     # Target video device. Profile should be defined for the device.
-    target_video_device = None
+    target_video_device = FW_H264_PL.FlightwaveSupportedDevices.color_1
 
     # Full path for target video device
     video_device_full_path = ""
@@ -47,12 +48,12 @@ def main(arg_in):
             print(FW_H264_PL.query_video_devices())
 
             # This is a filler. Todo: Logic for checking which cam is present. Return device full path.
-            video_device_full_path = "/dev/video1"
 
             if target_video_device == FW_H264_PL.FlightwaveSupportedDevices.color_1:
-
+                video_device_full_path = "/dev/video1"
                 # TODO: Start the subprocess for opening up a profile
-                pass
+                p = subprocess.popen(["/home/main/startup/gst_server/FW_gst_color_cam_one_pipeline.py -ip " +
+                                      "10.120.117.134 --wrs"])
 
             elif target_video_device == FW_H264_PL.FlightwaveSupportedDevices.color_2:
 
@@ -69,6 +70,7 @@ def main(arg_in):
                 # Todo: Check if subprocess is active, and associated video device exists. Exit otherwise.
                 if video_device_full_path not in FW_H264_PL.query_video_devices():
                     print("Video feed has ended.")
+                    p.kill()
                     break
 
         else:
