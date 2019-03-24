@@ -97,7 +97,7 @@ def query_video_devices():
     return [f for f in os.listdir(device_path) if "video" in f]
 
 
-def query_storage_devices(device_path="/media"):
+def query_storage_devices(media_path="/media"):
     """Query /media/ for storage devices.
 
         Retrieves a list of all storage devices pre-formatted by Flightwave Aero. If none are present,
@@ -115,7 +115,7 @@ def query_storage_devices(device_path="/media"):
     """
     # query /media/ for storage devices. Returns list of video devices that are formatted to have aero in name
 
-    return [f for f in os.listdir(device_path) if "aero" in f]
+    return [f for f in os.listdir(media_path) if "sdcard" in f]
 
 
 def main():
