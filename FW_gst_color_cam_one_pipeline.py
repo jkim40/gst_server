@@ -117,6 +117,105 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.rtpencoder.link(self.udpsink)
         self.is_linked = True
 
+    def gst_pipeline_color_cam_init_with_file_store_static_fr_init(self, vid_src="/dev/video0", ip_addr="10.120.117.50",
+                                                                   storage_location="/media/"):
+
+        print("Initializing GST Pipeline")
+        Gst.init(None)
+
+        self.pipeline = Gst.Pipeline.new("h.264 to h.264")
+
+        # Initialize video feed source
+        print("Initializing v4l2 source")
+        self.videosrc = Gst.ElementFactory.make("v4l2src","vid-src")
+        self.videosrc.set_property("device", vid_src)
+
+        # set up the Gst cap(s) for video/x-264 format
+        print("Generating video cap")
+        # self.videocap = Gst.caps_from_string("video/x-h264,width=1920,height=1080")
+        # self.videocap = Gst.caps_from_string("video/x-h264,width=1280,height=720")
+        # self.videocap = Gst.caps_from_string("video/x-h264,width=640,height=480")
+        self.videocap = Gst.caps_from_string("video/x-h264,width=640,height=360")
+
+        print("Generating tee")
+        self.tee = Gst.ElementFactory.make("tee","tee")
+
+        # Initialize udp sink queue to be sent over udp/rtp
+        print("Initializing network queue")
+        self.networkqueue = Gst.ElementFactory.make("queue", "network-queue")
+
+        # Initialize the video feed parser to parse h.264 frames
+        print("Initializing video parser")
+        self.videoparse = Gst.ElementFactory.make("h264parse", "vid-parse")
+
+        # Initialize udp sink queue to be sent over udp/rtp
+        print("Initializing network queue")
+        self.networkqueue = Gst.ElementFactory.make("queue","network-queue")
+
+        # Initialize rtp encoder
+        print("Initializing rtp encoder")
+        self.rtpencoder = Gst.ElementFactory.make("rtph264pay", "rtp-enc")
+
+        # Initialize udp sink : requires ip address of qgc
+        print("Initializing udp sink")
+        self.udpsink = Gst.ElementFactory.make("udpsink","udp-sink")
+        print("Setting port : %s, host 5600" % ip_addr)
+        self.udpsink.set_property("host", ip_addr)
+        self.udpsink.set_property("port", 5600)
+
+        # Initialize file sink queue to be saved locally
+        print("Initializing file sink queue")
+        self.filequeue = Gst.ElementFactory.make("queue", "file-queue")
+
+        # Initialize the video feed parser to parse h.264 frames
+        print("Initializing video parser")
+        self.fileparse = Gst.ElementFactory.make("h264parse", "file-parse")
+
+        # set up the Gst cap(s) for video/x-264 format
+        print("Generating video cap")
+        self.filecap = Gst.caps_from_string("video/x-h264,width=640,height=480")
+
+        # Initialize file sink
+        print("Initializing local file sink")
+        self.filesink = Gst.ElementFactory.make("filesink", "file-sink")
+        self.filesink.set_property("location",
+                                   storage_location + "aero_%s" % (datetime.datetime.now().strftime("%y%m%d%H%M")))
+
+        print("Adding all elements to pipeline")
+        # Add all elements pertaning to the tee to the pipeline
+        self.pipeline.add(self.videosrc)
+        self.pipeline.add(self.videoparse)
+        self.pipeline.add(self.tee)
+
+        # Add all elements pertaining to the network to the pipeline
+        self.pipeline.add(self.networkqueue)
+        self.pipeline.add(self.rtpencoder)
+        self.pipeline.add(self.udpsink)
+
+        # Add all elements pertaining to the file sinking to the pipeline
+        self.pipeline.add(self.filequeue)
+        self.pipeline.add(self.filesink)
+
+        # Link elements together in order, with filter
+        print("Linking pipeline elements")
+
+        ret = self.networkqueue.link(self.rtpencoder)
+        ret = ret and self.rtpencoder.link(self.udpsink)
+
+        ret = ret and self.filequeue.link(self.filesink)
+
+        ret = ret and self.videosrc.link_filtered(self.videoparse, self.videocap)
+        ret = ret and self.videoparse.link(self.tee)
+        ret = ret and self.tee.link(self.networkqueue)
+        ret = ret and self.tee.link(self.filequeue)
+
+        if ret == True:
+            self.is_linked = True
+        else:
+            print("Error: Failed to link elements")
+            self.is_linked = False
+
+
     def gst_pipeline_color_cam_with_file_store_init(self, vid_src="/dev/video0", ip_addr="10.120.117.50",
                                                     storage_location="/media/"):
 
@@ -135,7 +234,7 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.tee = Gst.ElementFactory.make("tee", "tee")
 
         # Initialize file sink queue to be saved locally
-        print("Initializing fil sink queue")
+        print("Initializing file sink queue")
         self.filequeue = Gst.ElementFactory.make("queue", "file-queue")
 
         # Initialize the video feed parser to parse h.264 frames
@@ -271,6 +370,13 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.start_feed()
         self.idle_task()
 
+    def color_cam_with_file_store_static_fr_task(self, vid_src="/dev/video1", ip_addr="10.120.17.50",
+                                                 media_path="/media/"):
+        print("Initializing video feed for " + vid_src + " :: " + ip_addr)
+        self.gst_pipeline_color_cam_init_with_file_store_static_fr_init(vid_src, ip_addr, media_path)
+        self.start_feed()
+        self.idle_task()
+
     def color_cam_with_file_store_task(self, vid_src="/dev/video1", ip_addr="10.120.17.50",
                                        media_path="/media/"):
         print("Initializing video feed for " + vid_src + " :: " + ip_addr)
@@ -300,16 +406,24 @@ def main(arg_in):
             if color_cam_1_present:
 
                 # Check that there is a storage device that flightwave has configured
-                if len(FW_H264_PL.query_storage_devices()) != 0:
+                if len(FW_H264_PL.query_storage_devices()) != 0 and arg_in.wr == True:
                     video_feed_thread = threading.Thread(target=pipeline.color_cam_with_file_store_task,
                                                          args=["/dev/video1", arg_in.ip,
                                                                FW_H264_PL.query_storage_devices()[0]])
                     video_feed_thread.start()
                     time.sleep(1)
 
+                # Store at same rate as stream
+                elif arg_in.wrs == True:
+                    print("Saving video to /home/main/aero_**")
+                    video_feed_thread = threading.Thread(target=pipeline.color_cam_with_file_store_static_fr_task,
+                                                         args=["/dev/video1", arg_in.ip, "/home/main/"])
+                    video_feed_thread.start()
+                    time.sleep(1)
+
                 # Test saving locally
                 elif arg_in.test == True:
-                    print("Saving video to /home/test_video.h264")
+                    print("Saving video to /home/main/test_video.h264")
                     video_feed_thread = threading.Thread(target=pipeline.color_cam_with_file_store_task,
                                                          args=["/dev/video1", arg_in.ip,
                                                                "/home/main/"])
@@ -341,6 +455,7 @@ if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("-ip", help="IP address of ground control", type=str)
     arg_parser.add_argument("--wr", help="Write to storage device", action='store_true')
+    arg_parser.add_argument("--wrs", help="Write to storage device at same rate as stream",action="store_true")
     arg_parser.add_argument("--test", help="Write to storage device test", action='store_true')
     args = arg_parser.parse_args()
     if args.ip:
@@ -350,5 +465,3 @@ if __name__ == "__main__":
         main(args)
     else:
         print("Missing target IP address to stream to.")
-
-
