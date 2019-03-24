@@ -123,87 +123,10 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         print("Initializing GST Pipeline")
         Gst.init(None)
 
-        self.pipeline = Gst.Pipeline.new("h.264 to h.264")
-
-        # Initialize video feed source
-        print("Initializing v4l2 source")
-        self.videosrc = Gst.ElementFactory.make("v4l2src","vid-src")
-        self.videosrc.set_property("device", vid_src)
-
-        # Initialize the video feed parser to parse h.264 frames
-        print("Initializing video parser")
-        self.videoparse = Gst.ElementFactory.make("h264parse", "vid-parse")
-
-        # set up the Gst cap(s) for video/x-264 format
-        print("Generating video cap")
-        # self.videocap = Gst.caps_from_string("video/x-h264,width=1920,height=1080")
-        # self.videocap = Gst.caps_from_string("video/x-h264,width=1280,height=720")
-        # self.videocap = Gst.caps_from_string("video/x-h264,width=640,height=480")
-        self.videocap = Gst.caps_from_string("video/x-h264,width=640,height=360")
-
-        print("Generating tee")
-        self.tee = Gst.ElementFactory.make("tee","tee")
-
-        # Initialize udp sink queue to be sent over udp/rtp
-        print("Initializing network queue")
-        self.networkqueue = Gst.ElementFactory.make("queue", "network-queue")
-
-        # Initialize rtp encoder
-        print("Initializing rtp encoder")
-        self.rtpencoder = Gst.ElementFactory.make("rtph264pay", "rtp-enc")
-
-        # Initialize udp sink : requires ip address of qgc
-        print("Initializing udp sink")
-        self.udpsink = Gst.ElementFactory.make("udpsink","udp-sink")
-        print("Setting port : %s, host 5600" % ip_addr)
-        self.udpsink.set_property("host", ip_addr)
-        self.udpsink.set_property("port", 5600)
-
-        # Initialize file sink queue to be saved locally
-        print("Initializing file sink queue")
-        self.filequeue = Gst.ElementFactory.make("queue", "file-queue")
-
-        # Initialize file sink
-        print("Initializing local file sink")
-        self.filesink = Gst.ElementFactory.make("filesink", "file-sink")
-        self.filesink.set_property("location",
-                                   storage_location + "aero_%s" % (datetime.datetime.now().strftime("%y%m%d%H%M")))
-
-        print("Adding all elements to pipeline")
-        # Add all elements pertaning to the tee to the pipeline
-        self.pipeline.add(self.videosrc)
-        self.pipeline.add(self.videoparse)
-        self.pipeline.add(self.tee)
-
-        # Add all elements pertaining to the network to the pipeline
-        self.pipeline.add(self.networkqueue)
-        self.pipeline.add(self.rtpencoder)
-        self.pipeline.add(self.udpsink)
-
-        # Add all elements pertaining to the file sinking to the pipeline
-        self.pipeline.add(self.filequeue)
-        self.pipeline.add(self.filesink)
-
-        # Link elements together in order, with filter
-        print("Linking pipeline elements")
-
-        ret = self.videosrc.link_filtered(self.videoparse, self.videocap)
-        ret = ret and self.videoparse.link(self.tee)
-        ret = ret and self.tee.link(self.filequeue)
-        ret = ret and self.tee.link(self.networkqueue)
-
-        ret = ret and self.filequeue.link(self.filesink)
-
-
-        ret = ret and self.networkqueue.link(self.rtpencoder)
-        ret = ret and self.rtpencoder.link(self.udpsink)
-
-
-    if ret == True:
-            self.is_linked = True
-        else:
-            print("Error: Failed to link elements")
-            self.is_linked = False
+        self.pipeline = Gst.parse_launch("v4l2src device=" + video_src + " ! video/x-h264,width=640,height=360 " +
+                                         "! tee name=t ! queue ! filesink location=" + storage_location + "_%s" % \
+                                         (datetime.datetime.now().strftime("%y%m%d%H%M")) + " t. ! queue ! rtph264pay "
+                                         "! udpsink host=" + ip_addr + " port=5600")
 
 
     def gst_pipeline_color_cam_with_file_store_init(self, vid_src="/dev/video0", ip_addr="10.120.117.50",
