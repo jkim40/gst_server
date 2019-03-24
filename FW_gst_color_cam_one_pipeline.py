@@ -123,7 +123,7 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         print("Initializing GST Pipeline")
         Gst.init(None)
 
-        self.pipeline = Gst.parse_launch("v4l2src device=" + video_src + " ! video/x-h264,width=640,height=360 " +
+        self.pipeline = Gst.parse_launch("v4l2src device=" + vid_src + " ! video/x-h264,width=640,height=360 " +
                                          "! tee name=t ! queue ! filesink location=" + storage_location + "_%s" % \
                                          (datetime.datetime.now().strftime("%y%m%d%H%M")) + " t. ! queue ! rtph264pay "
                                          "! udpsink host=" + ip_addr + " port=5600")
