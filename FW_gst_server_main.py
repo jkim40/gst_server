@@ -52,8 +52,8 @@ def main(arg_in):
             if target_video_device == FW_H264_PL.FlightwaveSupportedDevices.color_1:
                 video_device_full_path = "/dev/video1"
                 # TODO: Start the subprocess for opening up a profile
-                p = subprocess.popen(["/home/main/startup/gst_server/FW_gst_color_cam_one_pipeline.py -ip " +
-                                      "10.120.117.134 --wrs"])
+                p = subprocess.Popen(["python3","/home/main/startup/gst_server/FW_gst_color_cam_one_pipeline.py","-ip",
+                                      "10.120.117.134", "--wrs"])
 
             elif target_video_device == FW_H264_PL.FlightwaveSupportedDevices.color_2:
 
@@ -68,7 +68,9 @@ def main(arg_in):
             while True:
                 # Start user code here
                 # Todo: Check if subprocess is active, and associated video device exists. Exit otherwise.
-                if video_device_full_path not in FW_H264_PL.query_video_devices():
+                if video_device_full_path[5:len(video_device_full_path)] not in str(FW_H264_PL.query_video_devices()):
+                    print(FW_H264_PL.query_video_devices())
+                    print(video_device_full_path[5:len(video_device_full_path)])
                     print("Video feed has ended.")
                     p.kill()
                     break
