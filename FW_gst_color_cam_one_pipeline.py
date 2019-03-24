@@ -107,8 +107,8 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.rtpencoder.link(self.udpsink)
         self.is_linked = True
 
-    def gst_pipeline_color_cam_with_file_store_init(self, vid_src = "/dev/video0", ip_addr="10.120.117.50",
-                                                    storage_location="/media/aero/"):
+    def gst_pipeline_color_cam_with_file_store_init(self, vid_src="/dev/video0", ip_addr="10.120.117.50",
+                                                    storage_location="/media/"):
 
         print("Initializing GST Pipeline")
         Gst.init(None)
@@ -140,7 +140,7 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         print("Initializing local file sink")
         self.filesink = Gst.ElementFactory.make("filesink", "file-sink")
         self.filesink.set_property("location",
-                                   storage_location + "/%s" % (datetime.datetime.now().strftime("%y%m%d%H%M")))
+                                   storage_location + "%s" % (datetime.datetime.now().strftime("%y%m%d%H%M")))
 
         # Initialize udp sink queue to be sent over udp/rtp
         print("Initializing network queue")
@@ -229,18 +229,6 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
 
         self.is_linked = True
 
-    def start_feed(self):
-        if self.pipeline is not None and self.is_linked is True:
-            print("Starting video feed...")
-            self.pipeline.set_state(Gst.State.PAUSED)
-            self.pipeline.set_state(Gst.State.PLAYING)
-        else:
-            print("Pipeline non-existent, or elements not yet linked")
-
-    def stop_feed(self):
-        print("Stopping video feed")
-        self.pipeline.set_state(Gst.State.PAUSED)
-
     def color_cam_task(self, vid_src = "/dev/video1", ip_addr = "10.120.17.50"):
         print("Initializing video feed for " + vid_src + " :: " + ip_addr)
         self.gst_pipeline_color_cam_init(vid_src, ip_addr)
@@ -248,23 +236,11 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.idle_task()
 
     def color_cam_with_file_store_task(self, vid_src="/dev/video1", ip_addr="10.120.17.50",
-                                       media_path="/media/aero/"):
+                                       media_path="/media/"):
         print("Initializing video feed for " + vid_src + " :: " + ip_addr)
         self.gst_pipeline_color_cam_with_file_store_init(vid_src, ip_addr, media_path)
         self.start_feed()
         self.idle_task()
-
-    def idle_task(self):
-        print("Entering idle task while video feeds.")
-        while True:
-            if len(FW_H264_PL.query_video_devices()) == 0:
-                print("Stopping feed")
-                self.stop_feed()
-                self.is_linked = False
-                print("Returning to main task...")
-                break
-            else:
-                time.sleep(0.5)
 
 
 def main(arg_in):
@@ -275,7 +251,6 @@ def main(arg_in):
     video_device_found = True
     # These are fillers.
     color_cam_1_present = True
-    thermal_cam_present = False
 
     while True:
 
@@ -291,10 +266,13 @@ def main(arg_in):
                 # Check that there is a storage device that flightwave has configured
                 if len(FW_H264_PL.query_storage_devices()) != 0:
                     video_feed_thread = threading.Thread(target=pipeline.color_cam_with_file_store_task,
-                                                         args=["/dev/video1", arg_in.ip, query_storage_devices()[0]])
+                                                         args=["/dev/video1", arg_in.ip,
+                                                               FW_H264_PL.query_storage_devices()[0]])
                     video_feed_thread.start()
                     time.sleep(1)
 
+                elif arg_in.test == True:
+                    print("I am saving stuff")
                 # No storage device so start pipeline with direct feed
                 else:
 
@@ -302,9 +280,6 @@ def main(arg_in):
                                                          args=["/dev/video1", arg_in.ip])
                     video_feed_thread.start()
                     time.sleep(1)
-
-            elif thermal_cam_present:
-                pass
 
             while True:
                 # Start user code here
@@ -323,9 +298,13 @@ def main(arg_in):
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("-ip", help="IP address of ground control", type=str)
+    arg_parser.add_argument("-wr", help="Write to storage device", action='store_true')
+    arg_parser.add_argument("test", help="Write to storage device test", action='store_true')
     args = arg_parser.parse_args()
     if args.ip:
         print("IP ADDR: " + args.ip)
+        print("Saving Video?")
+        print(args.wr)
         main(args)
     else:
         print("Missing target IP address to stream to.")

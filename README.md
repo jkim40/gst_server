@@ -23,7 +23,8 @@ Dependencies:
         PyGObject
 
     Commands: 
-        sudo apt-get install python-pip3    
+        sudo apt-get update 
+        sudo apt-get install python3-pip
         sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config python-dev gir1.2-gtk-3.0     
         sudo apt-get install python-gi python3-gi \
         gstreamer1.0-tools \
