@@ -123,7 +123,7 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         print("Initializing GST Pipeline")
         Gst.init(None)
 
-        self.pipeline = Gst.Pipeline.new("h.264 to h.264")
+        # self.pipeline = Gst.Pipeline.new("h.264 to h.264")
 
         # Initialize video feed source
         print("Initializing v4l2 source")
@@ -198,43 +198,43 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
 
         # Add all elements to the pipeline
         print("Adding all elements to pipeline")
-        self.pipeline.add(self.videosrc)
-        self.pipeline.add(self.tee)
+        #self.pipeline.add(self.videosrc)
+        #self.pipeline.add(self.tee)
         # local file storage
-        self.pipeline.add(self.filequeue)
-        self.pipeline.add(self.fileparse)
-        self.pipeline.add(self.filesink)
+        #self.pipeline.add(self.filequeue)
+        #self.pipeline.add(self.fileparse)
+        #self.pipeline.add(self.filesink)
         # to be sent off to network
-        self.pipeline.add(self.networkqueue)
-        self.pipeline.add(self.decodebin)
-        self.pipeline.add(self.videoconverter)
-        self.pipeline.add(self.videoscale)
-        self.pipeline.add(self.videorate)
-        self.pipeline.add(self.h264encoder)
-        self.pipeline.add(self.videoparse)
-        self.pipeline.add(self.rtpencoder)
-        self.pipeline.add(self.udpsink)
+        #self.pipeline.add(self.networkqueue)
+        #self.pipeline.add(self.decodebin)
+        #self.pipeline.add(self.videoconverter)
+        #self.pipeline.add(self.videoscale)
+        #self.pipeline.add(self.videorate)
+        #self.pipeline.add(self.h264encoder)
+        #self.pipeline.add(self.videoparse)
+        #self.pipeline.add(self.rtpencoder)
+        #self.pipeline.add(self.udpsink)
 
         print("Linking pipeline elements")
 
         # Link elements before tee
-        ret = self.videosrc.link(self.tee)
+        #ret = self.videosrc.link(self.tee)
 
         # Link elements for file storage
-        ret = ret and self.filequeue.link_filtered(self.fileparse, self.filecap)
-        ret = ret and self.fileparse.link(self.filesink)
+        #ret = ret and self.filequeue.link_filtered(self.fileparse, self.filecap)
+        #ret = ret and self.fileparse.link(self.filesink)
 
         # Link elements for network
-        ret = ret and self.networkqueue.link(self.decodebin)
-        ret = ret and self.decodebin.link(self.videoconverter)
-        ret = ret and self.videoconverter.link(self.videorate)
-        ret = ret and self.videorate.link(self.videoscale)
-        ret = ret and self.videoscale.link_filtered(self.h264encoder, self.videocap)
-        ret = ret and self.h264encoder.link(self.videoparse)
-        ret = ret and self.videoparse.link(self.rtpencoder)
-        ret = ret and self.rtpencoder.link(self.udpsink)
+        #ret = ret and self.networkqueue.link(self.decodebin)
+        #ret = ret and self.decodebin.link(self.videoconverter)
+        #ret = ret and self.videoconverter.link(self.videorate)
+        #ret = ret and self.videorate.link(self.videoscale)
+        #ret = ret and self.videoscale.link_filtered(self.h264encoder, self.videocap)
+        #ret = ret and self.h264encoder.link(self.videoparse)
+        #ret = ret and self.videoparse.link(self.rtpencoder)
+        #ret = ret and self.rtpencoder.link(self.udpsink)
 
-        ret = ret and self.tee.link(self.networkqueue)
+        #ret = ret and self.tee.link(self.networkqueue)
         #ret = ret and  self.tee.link(self.filequeue)
 
         # To manually link pads:
@@ -246,8 +246,8 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         # self.tee_network_video_pad.link(self.network_videoqueue_pad)
         # self.tee_file_video_pad.link(self.file_videoqueue_pad)
 
-        if not ret:
-            print("Error: Elements could not be linked")
+        if not True:
+            # print("Error: Elements could not be linked")
             self.is_linked = False
             # return
         else:
