@@ -192,14 +192,12 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         # local file storage
         self.pipeline.add(self.filequeue)
         self.pipeline.add(self.fileparse)
-        self.pipeline.add(self.filecap)
         self.pipeline.add(self.filesink)
         # to be sent off to network
         self.pipeline.add(self.networkqueue)
         self.pipeline.add(self.decodebin)
         # this is a filler for videoscale
         # this is a filler for videorate
-        self.pipeline.add(self.videocap)
         self.pipeline.add(self.h264encoder)
         self.pipeline.add(self.videoparse)
         self.pipeline.add(self.rtpencoder)
@@ -271,8 +269,14 @@ def main(arg_in):
                     video_feed_thread.start()
                     time.sleep(1)
 
+                # Test saving locally
                 elif arg_in.test == True:
-                    print("I am saving stuff")
+                    print("Saving video to /home/test_video.h264")
+                    video_feed_thread = threading.Thread(target=pipeline.color_cam_with_file_store_task,
+                                                         args=["/dev/video1", arg_in.ip,
+                                                               "/home/"])
+                    video_feed_thread.start()
+                    time.sleep(1)
                 # No storage device so start pipeline with direct feed
                 else:
 
@@ -298,8 +302,8 @@ def main(arg_in):
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("-ip", help="IP address of ground control", type=str)
-    arg_parser.add_argument("-wr", help="Write to storage device", action='store_true')
-    arg_parser.add_argument("test", help="Write to storage device test", action='store_true')
+    arg_parser.add_argument("--wr", help="Write to storage device", action='store_true')
+    arg_parser.add_argument("--test", help="Write to storage device test", action='store_true')
     args = arg_parser.parse_args()
     if args.ip:
         print("IP ADDR: " + args.ip)
