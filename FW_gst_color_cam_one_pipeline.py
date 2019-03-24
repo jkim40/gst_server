@@ -196,6 +196,7 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         # to be sent off to network
         self.pipeline.add(self.networkqueue)
         self.pipeline.add(self.decodebin)
+        self.pipeline.add(self.videoconverter)
         self.pipeline.add(self.videoscale)
         self.pipeline.add(self.videorate)
         self.pipeline.add(self.h264encoder)
