@@ -52,6 +52,12 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.rtpencoder = None
         self.udpsink = None
 
+        self.tee_src_pad_template = None
+        self.tee_network_video_pad = None
+        self.network_videoqueue_pad = None
+        self.tee_file_video_pad = None
+        self.file_videoqueue_pad = None
+
     def gst_pipeline_color_cam_init(self, vid_src="/dev/video0", ip_addr="10.120.117.50"):
 
         print("Initializing GST Pipeline")
@@ -211,12 +217,12 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.videosrc.link(self.tee)
 
         # Link elements for file storage
-        self.tee.link(self.filequeue)
+        # self.tee.link(self.filequeue)
         self.filequeue.link_filtered(self.fileparse, self.filecap)
         self.fileparse.link(self.filesink)
 
         # Link elements for network
-        self.tee.link(self.networkqueue)
+        # self.tee.link(self.networkqueue)
         self.networkqueue.link(self.decodebin)
         self.decodebin.link(self.videoconverter)
         self.videoconverter.link(self.videoscale)
@@ -225,6 +231,15 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.h264encoder.link(self.videoparse)
         self.videoparse.link(self.rtpencoder)
         self.rtpencoder.link(self.udpsink)
+
+        self.tee_src_pad_template = self.tee.get_pad_template("src_%u")
+        self.tee_network_video_pad = self.tee.request_pad(self.tee_src_pad_template, None, None)
+        self.network_videoqueue_pad = self.networkqueue.get_static_pad("sink")
+        self.tee_file_video_pad = self.tee.request_pad(self.tee_src_pad_template, None, None)
+        self.file_videoqueue_pad = self.filequeue.get_static_pad("sink")
+
+        self.tee_network_video_pad.link(self.network_videoqueue_pad)
+        self.tee_file_video_pad.link(self.file_videoqueue_pad)
 
         self.is_linked = True
 
@@ -275,7 +290,7 @@ def main(arg_in):
                     print("Saving video to /home/test_video.h264")
                     video_feed_thread = threading.Thread(target=pipeline.color_cam_with_file_store_task,
                                                          args=["/dev/video1", arg_in.ip,
-                                                               "/home/"])
+                                                               "/home/main/"])
                     video_feed_thread.start()
                     time.sleep(1)
                 # No storage device so start pipeline with direct feed
