@@ -253,6 +253,18 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         else:
             self.is_linked = True
 
+        # This is a place holder until decodebin -> video converter is figured out.
+        self.pipeline = Gst.gst_parse_launch("gst-launch-1.0 v4l2src device=/dev/video1 " +
+                                             "! tee name=t ! queue ! video/x-h264, width=640, height=480 " +
+                                             "! h264parse ! filesink location=" + storage_location +
+                                             "%s" % (datetime.datetime.now().strftime("%y%m%d%H%M")) + " t. " +
+                                             "! queue ! decodebin ! videoscale ! videorate " +
+                                             "! video/x-raw,framerate=15/1,width=640,height=360 " +
+                                             "! x264enc bitrate=500 speed-preset=superfast tune=zerolatency " +
+                                             "! h264parse ! rtph264pay ! udpsink host=ip port=5600 ")
+
+        self.is_linked = True
+
     def color_cam_task(self, vid_src = "/dev/video1", ip_addr = "10.120.17.50"):
         print("Initializing video feed for " + vid_src + " :: " + ip_addr)
         self.gst_pipeline_color_cam_init(vid_src, ip_addr)
