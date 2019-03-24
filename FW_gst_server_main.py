@@ -52,9 +52,14 @@ def main(arg_in):
             if target_video_device == FW_H264_PL.FlightwaveSupportedDevices.color_1:
                 video_device_full_path = "/dev/video1"
 
-                if FW_H264_PL.query_storage_devices():
-                p = subprocess.Popen(["python3","/home/main/startup/gst_server/FW_gst_color_cam_one_pipeline.py","-ip",
-                                      "10.120.117.134", "--wrs"])
+                if len(FW_H264_PL.query_storage_devices()) != 0:
+                    # Store in found media device
+                    p = subprocess.Popen(["python3","/home/main/startup/gst_server/FW_gst_color_cam_one_pipeline.py",
+                                          "-ip","10.120.117.134", "--wrs"])
+                else:
+                    # No storage
+                    p = subprocess.Popen(["python3","/home/main/startup/gst_server/FW_gst_color_cam_one_pipeline.py",
+                                          "-ip","10.120.117.134"])
 
             elif target_video_device == FW_H264_PL.FlightwaveSupportedDevices.color_2:
 
