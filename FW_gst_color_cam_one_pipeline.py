@@ -130,6 +130,10 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.videosrc = Gst.ElementFactory.make("v4l2src","vid-src")
         self.videosrc.set_property("device", vid_src)
 
+        # Initialize the video feed parser to parse h.264 frames
+        print("Initializing video parser")
+        self.videoparse = Gst.ElementFactory.make("h264parse", "vid-parse")
+
         # set up the Gst cap(s) for video/x-264 format
         print("Generating video cap")
         # self.videocap = Gst.caps_from_string("video/x-h264,width=1920,height=1080")
@@ -143,14 +147,6 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         # Initialize udp sink queue to be sent over udp/rtp
         print("Initializing network queue")
         self.networkqueue = Gst.ElementFactory.make("queue", "network-queue")
-
-        # Initialize the video feed parser to parse h.264 frames
-        print("Initializing video parser")
-        self.videoparse = Gst.ElementFactory.make("h264parse", "vid-parse")
-
-        # Initialize udp sink queue to be sent over udp/rtp
-        print("Initializing network queue")
-        self.networkqueue = Gst.ElementFactory.make("queue","network-queue")
 
         # Initialize rtp encoder
         print("Initializing rtp encoder")
@@ -166,14 +162,6 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         # Initialize file sink queue to be saved locally
         print("Initializing file sink queue")
         self.filequeue = Gst.ElementFactory.make("queue", "file-queue")
-
-        # Initialize the video feed parser to parse h.264 frames
-        print("Initializing video parser")
-        self.fileparse = Gst.ElementFactory.make("h264parse", "file-parse")
-
-        # set up the Gst cap(s) for video/x-264 format
-        print("Generating video cap")
-        self.filecap = Gst.caps_from_string("video/x-h264,width=640,height=480")
 
         # Initialize file sink
         print("Initializing local file sink")
@@ -199,17 +187,19 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         # Link elements together in order, with filter
         print("Linking pipeline elements")
 
-        ret = self.networkqueue.link(self.rtpencoder)
-        ret = ret and self.rtpencoder.link(self.udpsink)
+        ret = self.videosrc.link_filtered(self.videoparse, self.videocap)
+        ret = ret and self.videoparse.link(self.tee)
+        ret = ret and self.tee.link(self.filequeue)
+        ret = ret and self.tee.link(self.networkqueue)
 
         ret = ret and self.filequeue.link(self.filesink)
 
-        ret = ret and self.videosrc.link_filtered(self.videoparse, self.videocap)
-        ret = ret and self.videoparse.link(self.tee)
-        ret = ret and self.tee.link(self.networkqueue)
-        ret = ret and self.tee.link(self.filequeue)
 
-        if ret == True:
+        ret = ret and self.networkqueue.link(self.rtpencoder)
+        ret = ret and self.rtpencoder.link(self.udpsink)
+
+
+    if ret == True:
             self.is_linked = True
         else:
             print("Error: Failed to link elements")
