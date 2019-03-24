@@ -34,13 +34,14 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         FW_H264_PL.H264Pipeline.__init__(self, video_device_path)
         self.pipeline = None
         self.videosrc = None
-        self.tee = None
 
+        # Video elements related with writing to storage device
         self.filequeue = None
         self.fileparse = None
         self.filecap = None
         self.filesink = None
 
+        # Video elements related with sending over network
         self.networkqueue = None
         self.decodebin = None
         self.videoconverter = None
@@ -52,11 +53,14 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.rtpencoder = None
         self.udpsink = None
 
-        self.tee_src_pad_template = None
-        self.tee_network_video_pad = None
-        self.network_videoqueue_pad = None
-        self.tee_file_video_pad = None
-        self.file_videoqueue_pad = None
+        # Tee related elements
+        self.tee = None
+        # For manual linkage :
+        # self.tee_src_pad_template = None
+        # self.tee_network_video_pad = None
+        # self.network_videoqueue_pad = None
+        # self.tee_file_video_pad = None
+        # self.file_videoqueue_pad = None
 
     def gst_pipeline_color_cam_init(self, vid_src="/dev/video0", ip_addr="10.120.117.50"):
 
@@ -162,15 +166,16 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
 
         # Initialize the videoscale converter
         print("Initializing video scaler")
-        self.videoscale = Gst.ElementFactory.make("videoscale","vid-scale")
+        self.videoscale = Gst.ElementFactory.make("videoscale", "vid-scale")
 
         # Initialize the videorate converter
         print("Initializing video rate converter")
-        self.videorate = Gst.ElementFactory.make("videorate","vid-rate")
+        self.videorate = Gst.ElementFactory.make("videorate", "vid-rate")
 
         # set up the Gst cap(s) for video/x-264 format
         print("Generating video cap")
         self.videocap = Gst.caps_from_string("video/x-raw,framerate=15/1,width=640,height=360")
+        #self.videocap = Gst.caps_from_string("video/x-raw,width=640,height=360")
 
         # Initialize encoder todo: modify encoder for encoding with set parameters bitrate, speed-preset=superfast and
         # todo: tune=zerolatency, if possible
@@ -210,38 +215,43 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.pipeline.add(self.rtpencoder)
         self.pipeline.add(self.udpsink)
 
-        # Link elements together in order, with filter. todo: finish linking these objects together
         print("Linking pipeline elements")
 
         # Link elements before tee
-        self.videosrc.link(self.tee)
+        ret = self.videosrc.link(self.tee)
 
         # Link elements for file storage
-        # self.tee.link(self.filequeue)
-        self.filequeue.link_filtered(self.fileparse, self.filecap)
-        self.fileparse.link(self.filesink)
+        ret = ret and self.filequeue.link_filtered(self.fileparse, self.filecap)
+        ret = ret and self.fileparse.link(self.filesink)
 
         # Link elements for network
-        # self.tee.link(self.networkqueue)
-        self.networkqueue.link(self.decodebin)
-        self.decodebin.link(self.videoconverter)
-        self.videoconverter.link(self.videoscale)
-        self.videoscale.link_filtered(self.videorate, self.videocap)
-        self.videorate.link(self.h264encoder)
-        self.h264encoder.link(self.videoparse)
-        self.videoparse.link(self.rtpencoder)
-        self.rtpencoder.link(self.udpsink)
+        ret = ret and self.networkqueue.link(self.decodebin)
+        ret = ret and self.decodebin.link(self.videoconverter)
+        ret = ret and self.videoconverter.link(self.videorate)
+        ret = ret and self.videorate.link(self.videoscale)
+        ret = ret and self.videoscale.link_filtered(self.h264encoder, self.videocap)
+        ret = ret and self.h264encoder.link(self.videoparse)
+        ret = ret and self.videoparse.link(self.rtpencoder)
+        ret = ret and self.rtpencoder.link(self.udpsink)
 
-        self.tee_src_pad_template = self.tee.get_pad_template("src_%u")
-        self.tee_network_video_pad = self.tee.request_pad(self.tee_src_pad_template, None, None)
-        self.network_videoqueue_pad = self.networkqueue.get_static_pad("sink")
-        self.tee_file_video_pad = self.tee.request_pad(self.tee_src_pad_template, None, None)
-        self.file_videoqueue_pad = self.filequeue.get_static_pad("sink")
+        ret = ret and self.tee.link(self.networkqueue)
+        #ret = ret and  self.tee.link(self.filequeue)
 
-        self.tee_network_video_pad.link(self.network_videoqueue_pad)
-        self.tee_file_video_pad.link(self.file_videoqueue_pad)
+        # To manually link pads:
+        # self.tee_src_pad_template = self.tee.get_pad_template("src_%u")
+        # self.tee_network_video_pad = self.tee.request_pad(self.tee_src_pad_template, None, None)
+        # self.network_videoqueue_pad = self.networkqueue.get_static_pad("sink")
+        # self.tee_file_video_pad = self.tee.request_pad(self.tee_src_pad_template, None, None)
+        # self.file_videoqueue_pad = self.filequeue.get_static_pad("sink")
+        # self.tee_network_video_pad.link(self.network_videoqueue_pad)
+        # self.tee_file_video_pad.link(self.file_videoqueue_pad)
 
-        self.is_linked = True
+        if not ret:
+            print("Error: Elements could not be linked")
+            self.is_linked = False
+            return
+        else:
+            self.is_linked = True
 
     def color_cam_task(self, vid_src = "/dev/video1", ip_addr = "10.120.17.50"):
         print("Initializing video feed for " + vid_src + " :: " + ip_addr)
