@@ -128,6 +128,7 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
                                          (datetime.datetime.now().strftime("%y%m%d%H%M")) + " t. ! queue ! rtph264pay "
                                          "! udpsink host=" + ip_addr + " port=5600")
 
+        self.is_linked = True
 
     def gst_pipeline_color_cam_with_file_store_init(self, vid_src="/dev/video0", ip_addr="10.120.117.50",
                                                     storage_location="/media/"):
