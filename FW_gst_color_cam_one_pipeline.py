@@ -261,7 +261,7 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
                                              "! queue ! decodebin ! videoscale ! videorate " +
                                              "! video/x-raw,framerate=15/1,width=640,height=360 " +
                                              "! x264enc bitrate=500 speed-preset=superfast tune=zerolatency " +
-                                             "! h264parse ! rtph264pay ! udpsink host=ip port=5600 ")
+                                             "! h264parse ! rtph264pay ! udpsink host=" + ip_addr + " port=5600 ")
 
         self.is_linked = True
 
