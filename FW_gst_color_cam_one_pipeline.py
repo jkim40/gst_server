@@ -17,39 +17,42 @@ Returns:
 __author__ = "Hong Kim"
 __copyright__ = "Copyright 2019, Flightwave Aerospace Systems"
 
-import os
+
+import gi
+gi.require_version('Gst', '1.0')
+from gi.repository import Gst, GObject
+import FW_H264_PL
 import argparse
 import threading
 import datetime
 import time
-import gi
-gi.require_version('Gst','1.0')
-from gi.repository import Gst, GObject
-import FW_H264_PL
 
 
 class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
 
-    def __init__(self, ):
+    def __init__(self, video_device_path="/dev/video0"):
+        FW_H264_PL.H264Pipeline.__init__(self, video_device_path)
         self.pipeline = None
         self.videosrc = None
-        self.videocap = None
-        self.filecap = None
-        self.videoparse = None
+        self.tee = None
+
+        self.filequeue = None
         self.fileparse = None
-        self.rawqueue = None
+        self.filecap = None
+        self.filesink = None
+
+        self.networkqueue = None
         self.decodebin = None
         self.videoconverter = None
+        self.videoscale = None
+        self.videorate = None
+        self.videocap = None
         self.h264encoder = None
-        self.networkqueue = None
-        self.filequeue = None
+        self.videoparse = None
         self.rtpencoder = None
-        self.filesink = None
         self.udpsink = None
-        self.tee = None
-        self.islinked = False
 
-    def gst_pipeline_color_cam_init(self, vid_src = "/dev/video0",ip_addr="10.120.117.50"):
+    def gst_pipeline_color_cam_init(self, vid_src="/dev/video0", ip_addr="10.120.117.50"):
 
         print("Initializing GST Pipeline")
         Gst.init(None)
@@ -102,7 +105,7 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.videoparse.link(self.networkqueue)
         self.networkqueue.link(self.rtpencoder)
         self.rtpencoder.link(self.udpsink)
-        self.islinked = True
+        self.is_linked = True
 
     def gst_pipeline_color_cam_with_file_store_init(self, vid_src = "/dev/video0", ip_addr="10.120.117.50",
                                                     storage_location="/media/aero/"):
@@ -145,9 +148,19 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
 
         # Initialize the binary decoder
         print("Initializing binary decoder")
-        self.decodebin = Gst.ElementFactory.make("decodebin","decode-bin")
+        self.decodebin = Gst.ElementFactory.make("decodebin", "decode-bin")
 
-        # todo: initialize videoscale and video rate here
+        # Initialize the video converter
+        print("Initializing video converter")
+        self.videoconverter = Gst.ElementFactory.make("videoconvert", "vid-conv")
+
+        # Initialize the videoscale converter
+        print("Initializing video scaler")
+        self.videoscale = Gst.ElementFactory.make("videoscale","vid-scale")
+
+        # Initialize the videorate converter
+        print("Initializing video rate converter")
+        self.videorate = Gst.ElementFactory.make("videorate","vid-rate")
 
         # set up the Gst cap(s) for video/x-264 format
         print("Generating video cap")
@@ -176,10 +189,12 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         print("Adding all elements to pipeline")
         self.pipeline.add(self.videosrc)
         self.pipeline.add(self.tee)
+        # local file storage
         self.pipeline.add(self.filequeue)
-        self.pipeline.add(self.filecap)
         self.pipeline.add(self.fileparse)
+        self.pipeline.add(self.filecap)
         self.pipeline.add(self.filesink)
+        # to be sent off to network
         self.pipeline.add(self.networkqueue)
         self.pipeline.add(self.decodebin)
         # this is a filler for videoscale
@@ -194,21 +209,28 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         print("Linking pipeline elements")
 
         # Link elements before tee
-        self.videosrc.link_filtered(self.videoparse,self.videocap)
-        self.videoparse.link(self.tee)
-        # Link elements after tee regarding network
-        self.networkqueue.link(self.rtpencoder)
-        self.rtpencoder.link(self.udpsink)
-        # Link elements after tee regarding file sink
-        self.filequeue.link(self.filesink)
+        self.videosrc.link(self.tee)
 
+        # Link elements for file storage
         self.tee.link(self.filequeue)
-        self.tee.link(self.networkqueue)
+        self.filequeue.link_filtered(self.fileparse, self.filecap)
+        self.fileparse.link(self.filesink)
 
-        self.islinked = False
+        # Link elements for network
+        self.tee.link(self.networkqueue)
+        self.networkqueue.link(self.decodebin)
+        self.decodebin.link(self.videoconverter)
+        self.videoconverter.link(self.videoscale)
+        self.videoscale.link_filtered(self.videorate, self.videocap)
+        self.videorate.link(self.h264encoder)
+        self.h264encoder.link(self.videoparse)
+        self.videoparse.link(self.rtpencoder)
+        self.rtpencoder.link(self.udpsink)
+
+        self.is_linked = True
 
     def start_feed(self):
-        if self.pipeline is not None and self.islinked is True:
+        if self.pipeline is not None and self.is_linked is True:
             print("Starting video feed...")
             self.pipeline.set_state(Gst.State.PAUSED)
             self.pipeline.set_state(Gst.State.PLAYING)
@@ -225,42 +247,30 @@ class ColorCamOneProfile(FW_H264_PL.H264Pipeline):
         self.start_feed()
         self.idle_task()
 
-    def color_cam_with_file_store_task(self, vid_src = "/dev/video1", ip_addr= "10.120.17.50",
-                                       media_path = "/media/aero/"):
+    def color_cam_with_file_store_task(self, vid_src="/dev/video1", ip_addr="10.120.17.50",
+                                       media_path="/media/aero/"):
         print("Initializing video feed for " + vid_src + " :: " + ip_addr)
-        self.gst_pipeline_color_cam_with_file_store_init(vid_src, ip_addr,media_path)
+        self.gst_pipeline_color_cam_with_file_store_init(vid_src, ip_addr, media_path)
         self.start_feed()
         self.idle_task()
 
     def idle_task(self):
         print("Entering idle task while video feeds.")
         while True:
-            if len(query_video_devices()) == 0:
+            if len(FW_H264_PL.query_video_devices()) == 0:
                 print("Stopping feed")
                 self.stop_feed()
-                self.islinked = False
+                self.is_linked = False
                 print("Returning to main task...")
                 break
             else:
                 time.sleep(0.5)
 
 
-def query_video_devices():
-    # query /dev/ for video sources. Returns list of video devices
-    device_path = "/dev"
-    return [f for f in os.listdir(device_path) if "video" in f]
-
-
-def query_storage_devices():
-    # query /media/ for storage devices. Returns list of video devices that are formatted to have aero in name
-    device_path = "/media"
-    return [f for f in os.listdir(device_path) if "aero" in f]
-
-
 def main(arg_in):
 
     # Initialize pipeline object
-    pipeline = H264Pipeline()
+    pipeline = ColorCamOneProfile()
     # Initialized to True so that if Video device is not found, it only prints once.
     video_device_found = True
     # These are fillers.
@@ -270,16 +280,16 @@ def main(arg_in):
     while True:
 
         # if a video device was found
-        if len(query_video_devices()) != 0:
+        if len(FW_H264_PL.query_video_devices()) != 0:
             print("Video device(s) found:")
-            print(query_video_devices())
+            print(FW_H264_PL.query_video_devices())
             video_device_found = True
 
             # this is a filler for color camera. Todo: Logic for checking which cam is present
             if color_cam_1_present:
 
                 # Check that there is a storage device that flightwave has configured
-                if len(query_storage_devices()) != 0:
+                if len(FW_H264_PL.query_storage_devices()) != 0:
                     video_feed_thread = threading.Thread(target=pipeline.color_cam_with_file_store_task,
                                                          args=["/dev/video1", arg_in.ip, query_storage_devices()[0]])
                     video_feed_thread.start()
@@ -299,7 +309,7 @@ def main(arg_in):
             while True:
                 # Start user code here
                 # check if video_feed_thread has joined. If yes, then exit from loop.
-                if not pipeline.islinked:
+                if not pipeline.is_linked:
                     print("Video feed has ended.")
                     break
 
